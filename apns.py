@@ -28,7 +28,7 @@ from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM
 from struct import pack, unpack
 from tornado import gen
-from tornado import iostream, ioloop
+from tornado import iostream
 
 try:
     from ssl import wrap_socket
