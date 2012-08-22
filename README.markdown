@@ -5,9 +5,9 @@ Modifications to PyAPNs to make it friendly with Tornado. This version of the li
 
 ## Installation
 
-Either download the source from GitHub or use easy_install:
+Download the source from GitHub:
 
-    $ easy_install apns
+    $ python2.7 setup.py install # may have to do sudo that!
 
 ## Sample usage
 
