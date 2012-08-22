@@ -27,6 +27,8 @@ from binascii import a2b_hex, b2a_hex
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM
 from struct import pack, unpack
+from tornado import gen
+from tornado import iostream, ioloop
 
 try:
     from ssl import wrap_socket
@@ -115,33 +117,40 @@ class APNsConnection(object):
         self.key_file = key_file
         self._socket = None
         self._ssl = None
+        self._stream_sock = None
 
     def __del__(self):
         self._disconnect();
 
-    def _connect(self):
+    @gen.engine
+    def _connect(self, callback):
         # Establish an SSL connection
         self._socket = socket(AF_INET, SOCK_STREAM)
-        self._socket.connect((self.server, self.port))
-        if wrap_socket:
-            self._ssl = wrap_socket(self._socket, self.key_file, self.cert_file)
-        else:
-            self._ssl = ssl(self._socket, self.key_file, self.cert_file)
+        self._stream_sock = iostream.SSLIOStream(self._socket,
+          ssl_options={'certfile': self.cert_file,
+                       'keyfile': self.key_file})
+        self._stream_sock.connect((self.server, self.port), callback)
 
     def _disconnect(self):
-        if self._socket:
-            self._socket.close()
+        if self._stream_sock:
+            self._stream_sock.close()
 
-    def _connection(self):
-        if not self._ssl:
-            self._connect()
-        return self._ssl
+    @gen.engine
+    def _connection(self, callback):
+        if not self._stream_sock or self._stream_sock.closed():
+            yield gen.Task(self._connect)
+        callback(self._stream_sock)
 
-    def read(self, n=None):
-        return self._connection().read(n)
+    @gen.engine
+    def read(self, n=None, callback=None):
+        conn = yield gen.Task(self._connection)
+        conn.read_bytes(n, callback)
 
-    def write(self, string):
-        return self._connection().write(string)
+    @gen.engine
+    def write(self, string, callback):
+        conn = yield gen.Task(self._connection)
+        conn.write(string, callback)
+
 
 
 class PayloadAlert(object):
@@ -292,6 +301,8 @@ class GatewayConnection(APNsConnection):
 
         return notification
 
-    def send_notification(self, token_hex, payload):
-        self.write(self._get_notification(token_hex, payload))
+    @gen.engine
+    def send_notification(self, token_hex, payload, callback):
+        yield gen.Task(self.write, self._get_notification(token_hex, payload))
+        callback()
 
