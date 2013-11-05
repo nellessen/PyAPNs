@@ -41,6 +41,13 @@ of the Payload constructor.
 payload = Payload(alert="Hello World!", custom={'sekrit_number':123})
 ```
 
+To send a **silent push notification** to an iOS 7 device, use the 
+content_available kwarg of the Payload constructor.
+
+```python
+payload = Payload(content_available=1, sound="")
+```
+
 ## Travis Build Status
 
 [![Build Status](https://secure.travis-ci.org/simonwhitaker/PyAPNs.png?branch=master)](http://travis-ci.org/simonwhitaker/PyAPNs)
